@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starry Scoops Ice Cream Parlour</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            animation: twinkle 2s infinite, float 3s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-pink-200 to-blue-200 min-h-screen font-sans text-gray-800">
+    <div id="starry-background" class="fixed inset-0 pointer-events-none z-[-1]"></div>
+
+    <nav class="fixed top-0 left-0 right-0 bg-white/70 backdrop-blur-sm shadow-lg z-50">
+        <div class="container mx-auto flex justify-between items-center p-4">
+            <div class="text-2xl font-bold text-pink-600">🍦 Starry Scoops</div>
+            <div class="flex space-x-4">
+                <button onclick="changeSection('home')" class="hover:text-pink-600 transition-colors">Home</button>
+                <button onclick="changeSection('buy')" class="hover:text-pink-600 transition-colors">Buy</button>
+                <button onclick="changeSection('about')" class="hover:text-pink-600 transition-colors">About</button>
+                <button onclick="changeSection('contact')" class="hover:text-pink-600 transition-colors">Contact</button>
+                <button onclick="changeSection('explore')" class="hover:text-pink-600 transition-colors">Explore</button>
+                <button onclick="toggleLogin()" id="loginButton" class="hover:text-pink-600 transition-colors">Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto mt-20 p-4">
+        <div id="homeSection">
+            <h1 class="text-5xl font-bold text-pink-600 mb-4 text-center">
+                Discover Magical Ice Cream Moments!
+            </h1>
+            <p class="text-xl mb-8 text-center">
+                Where every scoop tells a delightful story
+            </p>
+            <div id="flavorContainer" class="grid md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <div id="buySection" class="hidden">
+            <h2 class="text-3xl mb-4">Our Delicious Flavors</h2>
+            <div id="filterContainer" class="flex mb-4 space-x-2"></div>
+            <div id="buyFlavorContainer" class="grid md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <div id="cartSection" class="hidden">
+            <h2 class="text-3xl mb-4">Your Cart</h2>
+            <div id="cartItemsContainer"></div>
+            <div id="cartSummary" class="hidden">
+                <div class="text-right mt-4">
+                    <strong>Total: $<span id="cartTotal">0.00</span></strong>
+                    <button class="bg-green-500 text-white px-6 py-2 rounded ml-4">
+                        Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button 
+        onclick="changeSection('cart')"
+        class="fixed bottom-8 right-8 bg-pink-600 text-white p-4 rounded-full shadow-lg hover:bg-pink-700 transition-colors"
+    >
+        🛒
+        <span id="cartCount" class="absolute top-0 right-0 bg-blue-500 text-white rounded-full px-2 py-1 text-xs">
+            0
+        </span>
+    </button>
+
+    <script>
+        // Ice Cream Flavors Data
+        const iceCreamFlavors = [
+            { 
+                id: 1, 
+                name: 'Rainbow Delight', 
+                description: 'A colorful mix of fruity flavors', 
+                price: 4.99, 
+                image: 'https://via.placeholder.com/300x200?text=Rainbow+Delight',
+                tags: ['fruity', 'original']
+            },
+            { 
+                id: 2, 
+                name: 'Chocolate Haven', 
+                description: 'Rich chocolate with chocolate chips', 
+                price: 5.49, 
+                image: 'https://via.placeholder.com/300x200?text=Chocolate+Haven',
+                tags: ['chocolate', 'classic']
+            },
+            { 
+                id: 3, 
+                name: 'Vegan Vanilla Dream', 
+                description: 'Smooth dairy-free vanilla', 
+                price: 5.99, 
+                image: 'https://via.placeholder.com/300x200?text=Vegan+Vanilla',
+                tags: ['vegan', 'dairy-free']
+            }
+        ];
+
+        // State Management
+        let cart = [];
+        let filters = [];
+        let user = null;
+
+        // Generate Starry Background
+        function generateStars() {
+            const background = document.getElementById('starry-background');
+            for (let i = 0; i < 50; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.left = `${Math.random() * 100}%`;
+                const size = Math.random() * 5 + 2;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.animationDelay = `${Math.random() * 2}s`;
+                background.appendChild(star);
+            }
+        }
+
+        // Change Visible Section
+        function changeSection(section) {
+            ['home', 'buy', 'cart'].forEach(sec => {
+                document.getElementById(`${sec}Section`).classList.add('hidden');
+            });
+            document.getElementById(`${section}Section`).classList.remove('hidden');
+        }
+
+        // Render Flavors
+        function renderFlavors(container, flavors) {
+            const flavorContainer = document.getElementById(container);
+            flavorContainer.innerHTML = '';
+            flavors.forEach(flavor => {
+                const flavorElement = document.createElement('div');
+                flavorElement.classList.add('bg-white/80', 'rounded-lg', 'p-4', 'shadow-lg', 'hover:scale-105', 'transition-transform');
+                flavorElement.innerHTML = `
+                    <img src="${flavor.image}" alt="${flavor.name}" class="w-full rounded-lg mb-4">
+                    <h2 class="text-xl font-semibold">${flavor.name}</h2>
+                    <p>${flavor.description}</p>
+                    <p class="font-bold text-pink-600">$${flavor.price.toFixed(2)}</p>
+                    <button onclick="addToCart(${flavor.id})" class="w-full bg-blue-500 text-white py-2 rounded mt-2 hover:bg-blue-600">
+                        Add to Cart
+                    </button>
+                `;
+                flavorContainer.appendChild(flavorElement);
+            });
+        }
+
+        // Render Filters
+        function renderFilters() {
+            const filterContainer = document.getElementById('filterContainer');
+            const tags = ['fruity', 'chocolate', 'vegan', 'dairy-free'];
+            filterContainer.innerHTML = '';
+            tags.forEach(tag => {
+                const button = document.createElement('button');
+                button.textContent = tag;
+                button.classList.add('px-4', 'py-2', 'rounded', 'bg-gray-200');
+                button.onclick = () => toggleFilter(tag);
+                filterContainer.appendChild(button);
+            });
+        }
+
+        // Toggle Filter
+        function toggleFilter(tag) {
+            const index = filters.indexOf(tag);
+            if (index > -1) {
+                filters.splice(index, 1);
+            } else {
+                filters.push(tag);
+            }
+            renderBuySection();
+        }
+
+        // Render Buy Section
+        function renderBuySection() {
+            const filteredFlavors = iceCreamFlavors.filter(flavor => 
+                filters.length === 0 || 
+                filters.some(filter => flavor.tags.includes(filter))
+            );
+            renderFlavors('buyFlavorContainer', filteredFlavors);
+        }
+
+        // Add to Cart
+        function addToCart(flavorId) {
+            const flavor = iceCreamFlavors.find(f => f.id === flavorId);
+            cart.push(flavor);
+            updateCart();
+        }
+
+        // Update Cart
+        function updateCart() {
+            const cartCount = document.getElementById('cartCount');
+            const cartItemsContainer = document.getElementById('cartItemsContainer');
+            const cartSummary = document.getElementById('cartSummary');
+            const cartTotal = document.getElementById('cartTotal');
+
+            cartCount.textContent = cart.length;
+            
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = '<p>Your cart is empty</p>';
+                cartSummary.classList.add('hidden');
+            } else {
+                cartItemsContainer.innerHTML = cart.map((item, index) => `
+                    <div class="flex justify-between items-center bg-white/80 p-4 rounded-lg mb-2">
+                        <span>${item.name}</span>
+                        <span>$${item.price.toFixed(2)}</span>
+                        <button onclick="removeFromCart(${index})" class="bg-red-500 text-white px-4 py-2 rounded">
+                            Remove
+                        </button>
+                    </div>
+                `).join('');
+                
+                const total = cart.reduce((sum, item) => sum + item.price, 0);
+                cartTotal.textContent = total.toFixed(2);
+                cartSummary.classList.remove('hidden');
+            }
+        }
+
+        // Remove from Cart
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCart();
+        }
+
+        // Toggle Login
+        function toggleLogin() {
+            const loginButton = document.getElementById('loginButton');
+            if (user) {
+                user = null;
+                loginButton.textContent = 'Login';
+            } else {
+                user = { name: 'Ice Cream Lover' };
+                loginButton.textContent = 'Logout';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            generateStars();
+            renderFlavors('flavorContainer', iceCreamFlavors);
+            renderFilters();
+            renderBuySection();
+        });
+    </script>
+</body>
+</html>
